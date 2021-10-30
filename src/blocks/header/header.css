@@ -1,0 +1,26 @@
+.header {
+    margin: 45px auto 0;
+    max-width: 880px;
+    padding-bottom: 40px;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
+    border-bottom: 1px solid rgba(84, 84, 84, 0.7);
+    /* странно что цвет не совпадал, dev-tool в браузере сообщал другое
+    а в VC rgba(84, 84, 84, 0.702);
+    разница минимальна*/
+}
+
+@media screen and (max-width: 940px) {
+    .header {
+        margin: 45px 40px 0;
+    }
+}
+
+@media screen and (max-width: 425px) {
+    .header {
+        margin: 28px 0 0;
+        padding-bottom: 31px;
+    }
+}
