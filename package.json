@@ -1,8 +1,8 @@
 {
-  "name": "mesto-react",
+  "name": "react-mesto-auth",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://0r8-9dzcl.github.io/mesto-react/",
+  "homepage": "https://0r8-9dzcl.github.io/react-mesto-auth",
   "dependencies": {
     "@testing-library/jest-dom": "^5.12.0",
     "@testing-library/react": "^11.2.7",
