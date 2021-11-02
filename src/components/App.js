@@ -1,5 +1,5 @@
 import React from "react";
-import { Route } from "react-router";
+import { Route, Switch, useHistory } from "react-router-dom";
 import Header from "./Header";
 import Main from "./Main";
 import Footer from "./Footer";
@@ -8,8 +8,13 @@ import { CurrentUserContext } from "../contexts/CurrentUserContext";
 import api from "../utils/api";
 import EditAvatarPopup from "./EditAvatarPopup";
 import EditProfilePopup from "./EditProfilePopup";
-import AddPlacePopup from "./AddPlacePopup ";
-import DeletePlacePopup from "./DeletePlacePopup";
+import AddPlacePopup from "./AddPlacePopup";
+import DeletePlacePopup from "./DeletePlacePopup";	
+import Login from "./Login";
+import Register from "./Register";
+import ProtectedRoute from "./ProtectedRoute";
+import InfoTooltip from "./InfoTooltip";
+import * as auth from "./auth";
 
 
 function App() {
@@ -20,6 +25,18 @@ function App() {
 	const [selectedCard, setSelectedCard] = React.useState({name: '', link: ''});
 	const [deletingcard, setDeletingcard] = React.useState({});
 	const [cards, setCards] = React.useState([]);
+	// стейт логина
+	const [loggedIn, setLoggedIn] = React.useState(false);
+
+	// стейт хедера
+	const [headerEmail, setHeaderEmail] = React.useState('');
+
+	// стейт infotooltip
+	const [registerSuccess, setRegisterSuccess] = React.useState(false); // open popup
+	const [infoSuccess, setInfoSuccess] = React.useState(true); // упешно или нет прошла регистрация
+
+	// хук истории 
+	const history = useHistory();
 	// currenUser
 	const [currentUser, setCurrentUser] = React.useState({ name:'', about:''});
 	React.useEffect(() => {
@@ -54,6 +71,69 @@ function App() {
 	const handleCardClick  = (card) => {
 		setSelectedCard(card);
 	}
+	//регистрация пользователя
+	function handleRegister(password, email) {
+		console.log(password, email);
+		auth.register(password, email)
+		.then((res) => {
+			history.push('/sign-in');
+			setInfoSuccess(true); // статус регистрации
+			return res;
+		})
+		.catch((err) => {
+			setInfoSuccess(false); // статус регистрации
+			console.log(err); 
+		})
+		.finally(() => {
+			setRegisterSuccess(true); //открываем попап
+		});
+	}
+	
+	// Авторизация пользователя
+	function handleLogin(password, email) {
+		auth.login(password, email)
+		.then(data => {
+			if(data.token) {
+				localStorage.setItem('jwt', data.token);
+				setLoggedIn(true);
+				setHeaderEmail(email)
+				history.push('/');
+			}
+		})
+		.catch((err) => {
+			setInfoSuccess(false); // статус регистрации
+			setRegisterSuccess(true); //открываем попап
+			console.log(err); 
+		});
+	};
+
+	// провеарка токена
+	const tokenCheck = () => {
+		const jwt = localStorage.getItem('jwt');
+		if(jwt) {
+			auth.getAuthorization(jwt)
+			.then(data => {
+				if(data) {
+					setHeaderEmail(data.data.email)
+				}
+				setLoggedIn(true);
+				history.push('/');
+			})
+			.catch((err) => {
+				console.log(err); 
+			});
+		}
+	}
+	
+	tokenCheck();
+	// выход пользователся
+	function handleLogout() {
+		setLoggedIn(false);
+		setHeaderEmail('');
+		localStorage.removeItem('jwt');
+		history.push('/sign-in');
+	}
+	// закрытие попапов
 	const closeAllPopups = () => {
 		setIsEditAvatarPopupOpen(false);
 		setIsEditProfilePopupOpen(false);
@@ -61,6 +141,7 @@ function App() {
 		setIsDeletePlacePopupOpen(false);
 		setSelectedCard({name: '', link: ''});
 		setDeletingcard({});
+		setRegisterSuccess(false)
 	};
 	// UserData
 	function handleUpdateUser(data) {
@@ -101,6 +182,7 @@ function App() {
 		})
 		.catch(err => console.log(err));
 	}
+	
 	// add places
 	function handleAddPlace(data) {
 		api.postCards(data.name, data.link)
@@ -113,17 +195,28 @@ function App() {
 
 	return (
 		<CurrentUserContext.Provider value={currentUser}>
-			<Header />
-			<Main
-				cards={cards}
-				onEditAvatar={handleEditAvatarClick}
-				onEditProfile={handleEditProfileClick}
-				onAddPlace={handleAddPlaceClick}
-				onCardClick={handleCardClick}
-				onCardLike={handleCardLike}
-				onCardDelete={handleDeletePlaceClick}
-			/>
-			<Footer />
+			<Header loggedIn={loggedIn} headerEmail={headerEmail} logout={handleLogout} />
+			<Switch>
+				<Route path="/sign-in">
+					<Login setHeaderEmail={setHeaderEmail} login={handleLogin} logout={handleLogout} />
+				</Route>
+				<Route path="/sign-up">
+					<Register setHeaderEmail={setHeaderEmail} register={handleRegister} />
+				</Route>
+				<ProtectedRoute
+					path="/"
+					loggedIn={loggedIn}
+					component={Main}
+					cards={cards}
+					onEditAvatar={handleEditAvatarClick}
+					onEditProfile={handleEditProfileClick}
+					onAddPlace={handleAddPlaceClick}
+					onCardClick={handleCardClick}
+					onCardLike={handleCardLike}
+					onCardDelete={handleDeletePlaceClick}
+				/>
+				<ProtectedRoute loggedIn={loggedIn} component={Footer} />
+			</Switch>
 			<EditAvatarPopup
 				isOpen={isEditAvatarPopupOpen} 
 				onClose={closeAllPopups}
@@ -146,6 +239,13 @@ function App() {
 				onCardDelete={handleCardDelete}
 			/>				
 			<ImagePopup card={selectedCard} onClose={closeAllPopups} />
+			
+			<InfoTooltip
+				isOpen={registerSuccess}
+				onClose={closeAllPopups}
+				name="success"
+				success={infoSuccess}
+			/>	
 		</CurrentUserContext.Provider>
 	);
 }
