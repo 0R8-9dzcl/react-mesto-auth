@@ -14,7 +14,7 @@ import Login from "./Login";
 import Register from "./Register";
 import ProtectedRoute from "./ProtectedRoute";
 import InfoTooltip from "./InfoTooltip";
-import * as auth from "./auth";
+import * as auth from "../utils/auth";
 
 
 function App() {
@@ -39,21 +39,22 @@ function App() {
 	const history = useHistory();
 	// currenUser
 	const [currentUser, setCurrentUser] = React.useState({ name:'', about:''});
+	// объединил одним хуком и условием
 	React.useEffect(() => {
-		Promise.all([api.getUserInfo(), api.getCards()])
-		.then(([userInfo, cardList]) => {
-			setCurrentUser(userInfo);
-			setCards(cardList)
-		})
-		.catch(err => console.log(err))
-	}, []);
-	React.useEffect(() => {
-		api.getCards()
-		.then((cardList) => {
-			setCards(cardList)
-		})
-		.catch(err => console.log(err))
-	}, []);
+		if(loggedIn) {
+			Promise.all([api.getUserInfo(), api.getCards()])
+			.then(([userInfo, cardList]) => {
+				setCurrentUser(userInfo);
+				setCards(cardList)
+			})
+			.catch(err => console.log(err))
+			api.getCards()
+			.then((cardList) => {
+				setCards(cardList)
+			})
+			.catch(err => console.log(err))
+		}
+	}, [loggedIn]); // добавил зависимость
 	// Popups
 	const handleEditAvatarClick = () => {
 		setIsEditAvatarPopupOpen(true);
@@ -97,7 +98,6 @@ function App() {
 				localStorage.setItem('jwt', data.token);
 				setLoggedIn(true);
 				setHeaderEmail(email)
-				history.push('/');
 			}
 		})
 		.catch((err) => {
@@ -117,7 +117,6 @@ function App() {
 					setHeaderEmail(data.data.email)
 				}
 				setLoggedIn(true);
-				history.push('/');
 			})
 			.catch((err) => {
 				console.log(err); 
@@ -125,7 +124,14 @@ function App() {
 		}
 	}
 	
-	tokenCheck();
+	React.useEffect(() => {
+		tokenCheck();
+	}, []);
+	// вынес в отдельный хук
+	React.useEffect(() => {
+		history.push('/');
+	}, [loggedIn, history]);
+
 	// выход пользователся
 	function handleLogout() {
 		setLoggedIn(false);
@@ -143,6 +149,16 @@ function App() {
 		setDeletingcard({});
 		setRegisterSuccess(false)
 	};
+	// закрытие по ESC
+	React.useEffect(() => {
+		const closeByEscape = (e) => {
+		  if (e.key === 'Escape') {
+			closeAllPopups();
+		  }
+		}
+		document.addEventListener('keydown', closeByEscape);
+		return () => document.removeEventListener('keydown', closeByEscape);
+	}, []);
 	// UserData
 	function handleUpdateUser(data) {
 		api.setUserInfo(data.name, data.description)
