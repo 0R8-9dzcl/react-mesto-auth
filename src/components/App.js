@@ -129,7 +129,9 @@ function App() {
 	}, []);
 	// вынес в отдельный хук
 	React.useEffect(() => {
-		history.push('/');
+		if(loggedIn) {	
+			history.push('/');
+		}
 	}, [loggedIn, history]);
 
 	// выход пользователся
